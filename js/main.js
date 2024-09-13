@@ -13,7 +13,6 @@ class FlySpace extends Model {
         this.THETc = deg2rad(-39);
         this.V = 4790 - 10 * N;
         this.dt = 1e-3;
-        this.Ke = Ke;
 
         this.stage = [
             0,                                        // [0] this.t, 
