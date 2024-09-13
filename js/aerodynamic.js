@@ -92,7 +92,7 @@ export class Aerodynamics {
       // Aerodynamic coefficients
       const cx = this.Cx(this.M, this.alpha);
       const cy = this.Cy_alfa(this.M, this.alpha) * this.alpha + this.Cy_deltav(this.M, this.alpha) * this.deltav;
-      const cz = this.Cz_beta(this.M, this.beta) * this.beta  + this.Cz_deltan(this.M, this.alpha) * this.deltan;
+      const cz = this.Cz_beta(this.M, this.beta) * this.beta  + this.Cz_deltan(this.M, this.beta) * this.deltan;
       // Forces
       const X = cx * this.q * this.#s;
       const Y = cy * this.q * this.#s;
