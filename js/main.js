@@ -110,6 +110,8 @@ class FlySpace extends Model {
         const thead = document.createElement('thead');
         const headerRow = document.createElement('tr');
 
+        console.log(1111);
+
         HEADER_TABLE.forEach(header => {
             const th = document.createElement('th');
             th.textContent = header;
