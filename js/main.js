@@ -58,7 +58,6 @@ class FlySpace extends Model {
             const [Fxg, Fyg, Fzg] = [Fnzsk[0][0], Fnzsk[1][0], Fnzsk[2][0]];
 
             // Пересчет параметров
-            // if (+this.stage[0].toFixed(3) === 0.376) debugger
             this.euler(this.stage, Fxg, Fyg, Fzg, adh.Mx, adh.My, adh.Mz, this.stage[9], this.stage[10], this.stage[11], this.stage[1], this.stage[2], this.stage[3], this.stage[15], this.stage[16], this.stage[17], this.stage[18], this.stage[19], this.stage[20], this.stage[21], this.stage[0], this.dt);
 
             const rgNorm = modulOfValue(this.stage[18], this.stage[19], this.stage[20], this.stage[21])
@@ -87,11 +86,7 @@ class FlySpace extends Model {
                 continue;
             }
 
-            // if (+this.stage[0].toFixed(3) * 100 % 25 === 0 || (this.stage[2] <= this.#eps && this.stage[2] > 0))
-            if (+this.stage[0].toFixed(3) * 100 % 25 === 0 || (this.#eps >= this.stage[2] > 0))
-            // if (+this.stage[0].toFixed(3) * 100 % 25 === 0) 
-                for (let c = 0; c < this.XLSX.length; c++) 
-                    this.XLSX[c].push(this.stage[c]);
+            if (+this.stage[0].toFixed(3) * 100 % 25 === 0 || (this.#eps >= this.stage[2] > 0)) for (let c = 0; c < this.XLSX.length; c++) this.XLSX[c].push(this.stage[c]);
         }
     }
 
@@ -102,20 +97,12 @@ class FlySpace extends Model {
         const ANGULARS = [4,5,6,7,8,12,13,14]
         const data = this.XLSX;
         const table = document.createElement('table');
-  
-        table.style.borderCollapse = 'collapse'; // Убираем разделение ячеек
-
-        // Создаём заголовок таблицы
         const thead = document.createElement('thead');
         const headerRow = document.createElement('tr');
-
-        console.log(1111);
 
         HEADER_TABLE.forEach(header => {
             const th = document.createElement('th');
             th.textContent = header;
-            th.style.border = '1px solid black'; // Добавляем границы ячеек
-            th.style.padding = '5px';
             headerRow.appendChild(th);
         });
 
@@ -129,13 +116,10 @@ class FlySpace extends Model {
 
         for (let i = 0; i < numRows; i++) {
             const row = document.createElement('tr');
-            
             data.forEach((colArray,ind) => {
                 const angul = ANGULARS.includes(ind);
                 const td = document.createElement('td');
                 td.textContent = angul ? colArray[i] * 180 / math.pi : colArray[i];
-                td.style.border = '1px solid black'; // Добавляем границы ячеек
-                td.style.padding = '5px';
                 row.appendChild(td);
             });
 
@@ -153,6 +137,6 @@ class FlySpace extends Model {
 
 }
 
-const initFly = new FlySpace(12, 0, 0, 0);
+const initFly = new FlySpace(12, 1, 1, 0.55);
 initFly.getFly();
 initFly.getResult();
