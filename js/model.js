@@ -108,19 +108,21 @@ export class Model {
         return A;
     }
 
-    euler(vec, Fxg, Fyg, Fzg, Mx, My, Mz, vxg, vyg, vzg, xg, yg, zg, wx, wy, wz, rhoRG, lyRG, muRG, nuRG, t, dt) {
-        vec[9] += this.dvxg(Fxg) * dt;
-        vec[10] += this.dvyg(Fyg) * dt;
-        vec[11] += this.dvzg(Fzg) * dt;
-        vec[1] += this.dxg(vxg) * dt;
-        vec[2] += this.dyg(vyg) * dt;
-        vec[3] += this.dzg(vzg) * dt;
-        vec[15] += this.dwx(Mx, wy, wz) * dt;
-        vec[16] += this.dwy(My, wx, wz) * dt;
-        vec[17] += this.dwz(Mz, wx, wy) * dt;
-        vec[18] += this.drhoRG(rhoRG, lyRG, muRG, nuRG, wx, wy, wz) * dt;
-        vec[19] += this.dlyRG(rhoRG, lyRG, muRG, nuRG, wx, wy, wz) * dt;
-        vec[20] += this.dmuRG(rhoRG, lyRG, muRG, nuRG, wx, wy, wz) * dt;
-        vec[21] += this.dnuRG(rhoRG, lyRG, muRG, nuRG, wx, wy, wz) * dt;
+    euler(stage, Fxg, Fyg, Fzg, Mx, My, Mz, dt) {
+        let [vxg, vyg, vzg, wx, wy, wz, rhoRG, lyRG, muRG, nuRG] = [stage[9], stage[10], stage[11], stage[15], stage[16], stage[17], stage[18], stage[19], stage[20], stage[21]]
+
+        stage[9] += this.dvxg(Fxg) * dt;
+        stage[10] += this.dvyg(Fyg) * dt;
+        stage[11] += this.dvzg(Fzg) * dt;
+        stage[1] += this.dxg(vxg) * dt;
+        stage[2] += this.dyg(vyg) * dt;
+        stage[3] += this.dzg(vzg) * dt;
+        stage[15] += this.dwx(Mx, wy, wz) * dt;
+        stage[16] += this.dwy(My, wx, wz) * dt;
+        stage[17] += this.dwz(Mz, wx, wy) * dt;
+        stage[18] += this.drhoRG(rhoRG, lyRG, muRG, nuRG, wx, wy, wz) * dt;
+        stage[19] += this.dlyRG(rhoRG, lyRG, muRG, nuRG, wx, wy, wz) * dt;
+        stage[20] += this.dmuRG(rhoRG, lyRG, muRG, nuRG, wx, wy, wz) * dt;
+        stage[21] += this.dnuRG(rhoRG, lyRG, muRG, nuRG, wx, wy, wz) * dt;
     }
 }
