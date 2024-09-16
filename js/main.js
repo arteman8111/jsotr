@@ -1,6 +1,7 @@
 import { Atmosphere4401 } from "./4401-81.js";
 import { Aerodynamics } from "./aerodynamic.js";
 import { Model } from "./model.js";
+import { View } from "./view.js";
 import { initRorg, initMurg, initNurg, initLarg, deg2rad, modulOfValue } from "./helper.js";
 
 class FlySpace extends Model {
@@ -39,104 +40,117 @@ class FlySpace extends Model {
             initNurg(0, deg2rad(-39), 0),             // [21] this.nuRG
         ];
 
-        this.XLSX = this.stage.map(val => [val]);
+        this.stageRender = this.stage.map(val => [val]);
+        this.getFly();
 
+    }
+
+    copyList(arr) {
+        return [...arr]
+    }
+
+    getNewAdh(stage) {
+        let [h, Vxg, Vyg, Vzg, wx, wy, wz, alpha, beta, deltav, deltan, deltae] = [stage[2],stage[9],stage[10],stage[11],stage[15],stage[16],stage[17],stage[7],stage[8],stage[12],stage[13],stage[14]];
+
+        const V = modulOfValue(Vxg, Vyg, Vzg);
+        const atm = new Atmosphere4401(h);
+        const M = V / atm.a;
+        const q = atm.rho * V ** 2 / 2;
+        const adh = new Aerodynamics(M, V, q, wx, wy, wz, alpha, beta, deltav, deltan, deltae)
+
+        return [adh.X, adh.Y, adh.Z, adh.Mx, adh.My, adh.Mz];
+    }
+
+    getForceInNzsk(stage, X, Y, Z) {
+        let [rho, ly, mu, nu] = [stage[18], stage[19], stage[20], stage[21]];
+
+        const Fssk = [[-X], [Y], [Z]];
+        const Anzsk_ssk = this.nzsk_ssk(rho, ly, mu, nu);
+        const Fnzsk = math.multiply(math.inv(Anzsk_ssk), Fssk);
+
+        return [Fnzsk[0][0], Fnzsk[1][0], Fnzsk[2][0]]
+    }
+
+    updateRgParam(stage) {
+        let [rho, ly, mu, nu] = [stage[18], stage[19], stage[20], stage[21]];
+        const rgNorm = modulOfValue(rho, ly, mu, nu)
+        rho /= rgNorm;
+        ly /= rgNorm;
+        mu /= rgNorm;
+        nu /= rgNorm;
+        [stage[18], stage[19], stage[20], stage[21]] = [rho, ly, mu, nu];
+    }
+
+    getVssk(stage) {
+        let [Vxg, Vyg, Vzg] = [stage[9], stage[10], stage[11]];
+        let [rho, ly, mu, nu] = [stage[18], stage[19], stage[20], stage[21]];
+
+        const Vnzsk = [[Vxg], [Vyg], [Vzg]];
+        const Anzsk_sskRG = this.nzsk_ssk(rho, ly, mu, nu);
+        const Vssk = math.multiply(Anzsk_sskRG, Vnzsk);
+
+        return Vssk
+    }
+
+    updateAngularValues(stage, Vssk) {
+        let [thet, psi, gamma, alpha, betta] = [stage[4], stage[5], stage[6], stage[7], stage[8]];
+        let [rho, ly, mu, nu] = [stage[18], stage[19], stage[20], stage[21]];
+
+        thet = this.thetf(rho, ly, mu, nu);
+        psi = this.psif(rho, ly, mu, nu);
+        gamma = this.gammaf(rho, ly, mu, nu);
+        alpha = this.alphaf(Vssk[1][0], Vssk[0][0]);
+        betta = this.bettaf(Vssk[2][0], modulOfValue(Vssk[0][0], Vssk[1][0], Vssk[2][0]));
+
+        [stage[4], stage[5], stage[6], stage[7], stage[8]] = [thet, psi, gamma, alpha, betta];
+    }
+
+    updateDeltaValues(stage, stage_prev, step) {
+        let [thet, psi, gamma] = [stage[4], stage[5], stage[6]];
+        let [thet_prev, psi_prev, gamma_prev] = [stage_prev[4], stage_prev[5], stage_prev[6]];
+        let [dv, dn, de] = [stage[12], stage[13], stage[14]];
+
+        dv = this.deltavf(thet, thet_prev, step);
+        dn = this.deltanf(psi, psi_prev, step);
+        de = this.deltaef(gamma, gamma_prev, step);
+
+        [stage[12], stage[13], stage[14]] = [dv, dn, de];
+    }
+
+    filterValues(level = 25) {
+        if (+this.stage[0].toFixed(3) * 100 % level === 0 || (this.#eps >= this.stage[2] > 0)) 
+            for (let c = 0; c < this.stageRender.length; c++) 
+                this.stageRender[c].push(this.stage[c]);
     }
 
     getFly() {
         while (this.stage[2] >= this.#eps) {
             // debugger
-            const stage_prev = [...this.stage];
-            const V = modulOfValue(this.stage[9], this.stage[10], this.stage[11]);
-            const atm = new Atmosphere4401(this.stage[2]);
-            const M = V / atm.a;
-            const q = atm.rho * V ** 2 / 2;
-            const adh = new Aerodynamics(M, V, q, this.stage[15], this.stage[16], this.stage[17], this.stage[7], this.stage[8], this.stage[12], this.stage[13], this.stage[14])
-            const Fssk = [[-adh.X], [adh.Y], [adh.Z]];
-            const Anzsk_ssk = this.nzsk_ssk(this.stage[18], this.stage[19], this.stage[20], this.stage[21]);
-            const Fnzsk = math.multiply(math.inv(Anzsk_ssk), Fssk);
-            const [Fxg, Fyg, Fzg] = [Fnzsk[0][0], Fnzsk[1][0], Fnzsk[2][0]];
+            // this.stage[0]=+this.stage[0].toFixed(3)
+            const stage_prev = this.copyList(this.stage);
+            const [X, Y, Z, Mx, My, Mz] = this.getNewAdh(this.stage);
+            const [Fxg, Fyg, Fzg] = this.getForceInNzsk(this.stage, X, Y, Z);
 
             // Пересчет параметров
-            this.euler(this.stage, Fxg, Fyg, Fzg, adh.Mx, adh.My, adh.Mz, this.stage[9], this.stage[10], this.stage[11], this.stage[1], this.stage[2], this.stage[3], this.stage[15], this.stage[16], this.stage[17], this.stage[18], this.stage[19], this.stage[20], this.stage[21], this.stage[0], this.dt);
-
-            const rgNorm = modulOfValue(this.stage[18], this.stage[19], this.stage[20], this.stage[21])
-            this.stage[18] /= rgNorm;
-            this.stage[19] /= rgNorm;
-            this.stage[20] /= rgNorm;
-            this.stage[21] /= rgNorm;
-            const Vnzsk = [[this.stage[9]], [this.stage[10]], [this.stage[11]]];
-            const Anzsk_sskRG = this.nzsk_ssk(this.stage[18], this.stage[19], this.stage[20], this.stage[21]);
-            const Vssk = math.multiply(Anzsk_sskRG, Vnzsk);
-
-            this.stage[4] = this.thetf(this.stage[18], this.stage[19], this.stage[20], this.stage[21]);
-            this.stage[5] = this.psif(this.stage[18], this.stage[19], this.stage[20], this.stage[21]);
-            this.stage[6] = this.gammaf(this.stage[18], this.stage[19], this.stage[20], this.stage[21]);
-            this.stage[7] = this.alphaf(Vssk[1][0], Vssk[0][0]);
-            this.stage[8] = this.bettaf(Vssk[2][0], modulOfValue(Vssk[0][0], Vssk[1][0], Vssk[2][0]));
-            this.stage[12] = this.deltavf(this.stage[4], stage_prev[4], this.dt, this.Kv);
-            this.stage[13] = this.deltanf(this.stage[5], stage_prev[5], this.dt, this.Kn);
-            this.stage[14] = this.deltaef(this.stage[6], stage_prev[6], this.dt, this.Ke, this.Ke);
-
+            this.euler(this.stage, Fxg, Fyg, Fzg, Mx, My, Mz, this.dt);
+            this.updateRgParam(this.stage);
+            this.updateAngularValues(this.stage, this.getVssk(this.stage));
+            this.updateDeltaValues(this.stage, stage_prev, this.dt)
+            
             this.stage[0] += this.dt;
 
             if (this.stage[2] < 0) {
-                this.stage = [...stage_prev];
+                this.stage = this.copyList(stage_prev);
                 this.dt /= 10;
                 continue;
             }
 
-            if (+this.stage[0].toFixed(3) * 100 % 25 === 0 || (this.#eps >= this.stage[2] > 0)) for (let c = 0; c < this.XLSX.length; c++) this.XLSX[c].push(this.stage[c]);
+            this.filterValues(1);
         }
     }
-
-    getResult() {
-
-        const app = 'app';
-        const HEADER_TABLE = ['t', 'Xg', 'Yg', 'Zg', 'thet', 'psi', 'gamma', 'alpha', 'betta', 'Vxg', 'Vyg', 'Vzg', 'dv', 'dn', 'de', 'wx', 'wy', 'wz', 'rho', 'ly', 'mu', 'nu'];
-        const ANGULARS = [4,5,6,7,8,12,13,14]
-        const data = this.XLSX;
-        const table = document.createElement('table');
-        const thead = document.createElement('thead');
-        const headerRow = document.createElement('tr');
-
-        HEADER_TABLE.forEach(header => {
-            const th = document.createElement('th');
-            th.textContent = header;
-            headerRow.appendChild(th);
-        });
-
-        thead.appendChild(headerRow);
-        table.appendChild(thead);
-
-        const tbody = document.createElement('tbody');
-
-        // Предполагается, что все вложенные массивы в 'data' одинаковой длины
-        const numRows = data[0].length;
-
-        for (let i = 0; i < numRows; i++) {
-            const row = document.createElement('tr');
-            data.forEach((colArray,ind) => {
-                const angul = ANGULARS.includes(ind);
-                const td = document.createElement('td');
-                td.textContent = angul ? colArray[i] * 180 / math.pi : colArray[i];
-                row.appendChild(td);
-            });
-
-            tbody.appendChild(row);
-        }
-
-        table.appendChild(tbody);
-
-        // Добавляем таблицу в документ (например, в элемент с id 'table-container')
-        const container = document.getElementById(app);
-        container.innerHTML = ''; // Очищаем контейнер перед добавлением таблицы
-        container.appendChild(table);
-    }
-
-
 }
 
 const initFly = new FlySpace(12, 1, 1, 0.55);
-initFly.getFly();
-initFly.getResult();
+const renderData = new View(initFly.stageRender);
+// initFly.getFly();
+renderData.getResult();
