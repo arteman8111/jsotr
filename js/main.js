@@ -2,7 +2,7 @@ import { Atmosphere4401 } from "./4401-81.js";
 import { Aerodynamics } from "./aerodynamic.js";
 import { Model } from "./model.js";
 import { View } from "./view.js";
-import { initRorg, initMurg, initNurg, initLarg, deg2rad, modulOfValue } from "./helper.js";
+import { deg2rad, modulOfValue, toFixedUpdate, setLimit, arrayRadToDeg, copyList } from "./helper.js";
 
 class FlySpace extends Model {
     #eps = 1e-4;
@@ -34,23 +34,19 @@ class FlySpace extends Model {
             0.4,                                      // [15] this.wx, 
             0,                                        // [16] this.wy, 
             0,                                        // [17] this.wz, 
-            initRorg(0, deg2rad(-39), 0),             // [18] this.rhoRG, 
-            initLarg(0, deg2rad(-39), 0),             // [19] this.lyRG, 
-            initMurg(0, deg2rad(-39), 0),             // [20] this.muRG, 
-            initNurg(0, deg2rad(-39), 0),             // [21] this.nuRG
+            this.initRorg(0, deg2rad(-39), 0),             // [18] this.rhoRG, 
+            this.initLarg(0, deg2rad(-39), 0),             // [19] this.lyRG, 
+            this.initMurg(0, deg2rad(-39), 0),             // [20] this.muRG, 
+            this.initNurg(0, deg2rad(-39), 0),             // [21] this.nuRG
         ];
 
-        this.stageRender = this.stage.map(val => [val]);
+        this.stageRender = this.stage.map((v,k) => [arrayRadToDeg(v,k)]);
         this.getFly();
 
     }
 
-    copyList(arr) {
-        return [...arr]
-    }
-
     getNewAdh(stage) {
-        let [h, Vxg, Vyg, Vzg, wx, wy, wz, alpha, beta, deltav, deltan, deltae] = [stage[2],stage[9],stage[10],stage[11],stage[15],stage[16],stage[17],stage[7],stage[8],stage[12],stage[13],stage[14]];
+        let [h, Vxg, Vyg, Vzg, wx, wy, wz, alpha, beta, deltav, deltan, deltae] = [stage[2], stage[9], stage[10], stage[11], stage[15], stage[16], stage[17], stage[7], stage[8], stage[12], stage[13], stage[14]];
 
         const V = modulOfValue(Vxg, Vyg, Vzg);
         const atm = new Atmosphere4401(h);
@@ -117,17 +113,18 @@ class FlySpace extends Model {
         [stage[12], stage[13], stage[14]] = [dv, dn, de];
     }
 
+    clearTrashVal(stage, part, level) {
+        return toFixedUpdate(stage, part, level) || setLimit(stage, this.#eps)
+    }
+
     filterValues(level = 25) {
-        if (+this.stage[0].toFixed(3) * 100 % level === 0 || (this.#eps >= this.stage[2] > 0)) 
-            for (let c = 0; c < this.stageRender.length; c++) 
-                this.stageRender[c].push(this.stage[c]);
+        if (this.clearTrashVal(this.stage, 3, level))
+            this.stageRender.forEach((v, k) => v.push(arrayRadToDeg(this.stage[k], k)))
     }
 
     getFly() {
         while (this.stage[2] >= this.#eps) {
-            // debugger
-            // this.stage[0]=+this.stage[0].toFixed(3)
-            const stage_prev = this.copyList(this.stage);
+            const stage_prev = copyList(this.stage);
             const [X, Y, Z, Mx, My, Mz] = this.getNewAdh(this.stage);
             const [Fxg, Fyg, Fzg] = this.getForceInNzsk(this.stage, X, Y, Z);
 
@@ -136,20 +133,26 @@ class FlySpace extends Model {
             this.updateRgParam(this.stage);
             this.updateAngularValues(this.stage, this.getVssk(this.stage));
             this.updateDeltaValues(this.stage, stage_prev, this.dt)
-            
             this.stage[0] += this.dt;
 
             if (this.stage[2] < 0) {
-                this.stage = this.copyList(stage_prev);
+                this.stage = copyList(stage_prev);
                 this.dt /= 10;
                 continue;
             }
 
-            this.filterValues(1);
+            this.filterValues();
         }
     }
 }
 
+console.log(document.querySelector('#app'))
+const app = document.querySelector('#app');
+if (app) {
+    console.log(1)
+} else {
+    console.log(0)
+}
 const initFly = new FlySpace(12, 1, 1, 0.55);
 const renderData = new View(initFly.stageRender);
 // initFly.getFly();

@@ -12,6 +12,19 @@ export class Model {
         this.Ke2 = Ke;
     }
 
+    initRorg(psi, thet, gamma) {
+        return math.cos(psi / 2) * math.cos(thet / 2) * math.cos(gamma / 2) - math.sin(psi / 2) * math.sin(thet / 2) * math.sin(gamma / 2);
+    }
+    initLarg(psi, thet, gamma) {
+        return math.sin(psi / 2) * math.sin(thet / 2) * math.cos(gamma / 2) + math.cos(psi / 2) * math.cos(thet / 2) * math.sin(gamma / 2);
+    }
+    initMurg(psi, thet, gamma) {
+        return math.sin(psi / 2) * math.cos(thet / 2) * math.cos(gamma / 2) + math.cos(psi / 2) * math.sin(thet / 2) * math.sin(gamma / 2);
+    }
+    initNurg(psi, thet, gamma) {
+        return math.cos(psi / 2) * math.sin(thet / 2) * math.cos(gamma / 2) - math.sin(psi / 2) * math.cos(thet / 2) * math.sin(gamma / 2);
+    }
+
     dvxg(Fxg) {
         return Fxg / this.#m;
     }

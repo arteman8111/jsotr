@@ -1,3 +1,5 @@
+import { HEADER_OF_PARAMETERS, INDEX_OF_ANGULAR } from "./const.js";
+
 export class View {
     constructor(datas) {
         this.datas = datas;
@@ -5,24 +7,20 @@ export class View {
 
     getResult() {
         const data = this.datas;
-        const app = 'app';
-
-        const HEADER_TABLE = ['t', 'Xg', 'Yg', 'Zg', 'thet', 'psi', 'gamma', 'alpha', 'betta', 'Vxg', 'Vyg', 'Vzg', 'dv', 'dn', 'de', 'wx', 'wy', 'wz', 'rho', 'ly', 'mu', 'nu'];
-        const ANGULARS = [4, 5, 6, 7, 8, 12, 13, 14];
-
         const numRows = data[0].length;
         const rowData = [];
 
         for (let i = 0; i < numRows; i++) {
             const row = {};
-            HEADER_TABLE.forEach((header, index) => {
-                const angul = ANGULARS.includes(index);
-                row[header] = angul ? data[index][i] * 180 / Math.PI : data[index][i];
+            HEADER_OF_PARAMETERS.forEach((header, index) => {
+                // const angul = INDEX_OF_ANGULAR.includes(index);
+                // row[header] = angul ? data[index][i] * 180 / Math.PI : data[index][i];
+                row[header] = data[index][i];
             });
             rowData.push(row);
         }
 
-        const columnDefs = HEADER_TABLE.map(header => ({
+        const columnDefs = HEADER_OF_PARAMETERS.map(header => ({
             headerName: header,
             field: header
         }));
@@ -63,7 +61,7 @@ export class View {
             // paginationPageSize: 18,
         };
 
-        const container = document.getElementById(app);
+        const container = document.querySelector('#app');
         container.innerHTML = '';
 
         const gridDiv = document.createElement('div');
